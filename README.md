@@ -7,7 +7,7 @@ Plugins for [Markback](https://github.com/esetera/markback), where you review an
 ## Add them
 
 ```bash
-review plugin add https://github.com/purescience-inc/markback-plugins
+review plugin add https://github.com/esetera/markback-plugins
 ```
 
 It says what each plugin adds and asks before adding anything (run any other way than in a terminal, it needs `--yes`). Plugins run code on your computer, so add only ones you trust. `review plugin list` shows what you have; `review plugin remove <name>` takes one away.
