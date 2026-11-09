@@ -22,15 +22,17 @@ export default function markdown(answers, { app } = {}) {
       good.push(screenName(a))
       continue
     }
-    // Marks sent earlier on the same picture that still stand come with the latest answer, under earlier.
-    const shapes = [...(a.earlier ?? []).flatMap(e => e.shapes ?? []), ...(a.shapes ?? [])]
-    const worded = shapes.filter(s => s.type === 'text' && String(s.text ?? '').trim())
-    const unworded = shapes.filter(s => s.type !== 'text')
-    const note = firstLine(a.notes)
-    for (const s of worded) lines.push(`- [ ] **${screenName(a)}**: ${oneLine(s.text)} (${place(s)})${fileLink(a.annotatedImage)}`)
-    // Boxes and arrows say where; the note, when there is one, says what.
-    for (const s of unworded) lines.push(`- [ ] **${screenName(a)}**: ${note || 'see the marked picture'} (${place(s)})${fileLink(a.annotatedImage)}`)
-    if (!shapes.length && note) lines.push(`- [ ] **${screenName(a)}**: ${note}${fileLink(a.annotatedImage)}`)
+    // Marks sent earlier on the same picture that still stand come with the latest answer, under earlier: each with its
+    // own words and its own marked picture, which holds only the marks that were new in it.
+    for (const sent of [...(a.earlier ?? []), a]) {
+      const shapes = sent.shapes ?? []
+      const note = firstLine(sent.notes)
+      const link = fileLink(sent.annotatedImage)
+      for (const s of shapes.filter(x => x.type === 'text' && String(x.text ?? '').trim())) lines.push(`- [ ] **${screenName(a)}**: ${oneLine(s.text)} (${place(s)})${link}`)
+      // Boxes and arrows say where; the note sent with them, when there is one, says what.
+      for (const s of shapes.filter(x => x.type !== 'text')) lines.push(`- [ ] **${screenName(a)}**: ${note || 'see the marked picture'} (${place(s)})${link}`)
+      if (!shapes.length && note) lines.push(`- [ ] **${screenName(a)}**: ${note}${link}`)
+    }
   }
   const title = app || sorted[0]?.app || 'Marks'
   return [
