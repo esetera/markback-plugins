@@ -26,6 +26,14 @@ test('the same answers in any order give the same text', () => {
   assert.equal(markdown([...answers].reverse()), markdown(answers))
 })
 
+test('marks sent earlier that still stand are kept, and every mark stays one line', () => {
+  const text = markdown([{ app: 'A', screen: 'S', verdict: 'changes', notes: '', sentAt: '2', shapes: [{ type: 'text', box: { x: 1, y: 2 }, text: 'two\nlines' }],
+    earlier: [{ shapes: [{ type: 'text', box: { x: 5, y: 6 }, text: 'From before' }] }] }])
+  assert.match(text, /## A: 2 marks/)
+  assert.match(text, /\*\*S\*\*: From before \(text at 5, 6\)/)
+  assert.match(text, /\*\*S\*\*: two lines \(text at 1, 2\)/)
+})
+
 test('nothing marked says so', () => {
   assert.match(markdown([answers[2]]), /Nothing to change\./)
 })

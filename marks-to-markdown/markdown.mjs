@@ -9,6 +9,8 @@ const place = shape =>
 
 const screenName = a => `${a.screen}${a.mode ? ` (${a.mode})` : ''}`
 const firstLine = text => String(text ?? '').trim().split('\n')[0]
+/** Words on one line, so a line stays one item of the checklist. */
+const oneLine = text => String(text ?? '').replace(/\s+/g, ' ').trim()
 const fileLink = path => (path ? ` · [marked picture](${encodeURI(`file://${path}`)})` : '')
 
 export default function markdown(answers, { app } = {}) {
@@ -20,11 +22,12 @@ export default function markdown(answers, { app } = {}) {
       good.push(screenName(a))
       continue
     }
-    const shapes = a.shapes ?? []
+    // Marks sent earlier on the same picture that still stand come with the latest answer, under earlier.
+    const shapes = [...(a.earlier ?? []).flatMap(e => e.shapes ?? []), ...(a.shapes ?? [])]
     const worded = shapes.filter(s => s.type === 'text' && String(s.text ?? '').trim())
     const unworded = shapes.filter(s => s.type !== 'text')
     const note = firstLine(a.notes)
-    for (const s of worded) lines.push(`- [ ] **${screenName(a)}**: ${s.text.trim()} (${place(s)})${fileLink(a.annotatedImage)}`)
+    for (const s of worded) lines.push(`- [ ] **${screenName(a)}**: ${oneLine(s.text)} (${place(s)})${fileLink(a.annotatedImage)}`)
     // Boxes and arrows say where; the note, when there is one, says what.
     for (const s of unworded) lines.push(`- [ ] **${screenName(a)}**: ${note || 'see the marked picture'} (${place(s)})${fileLink(a.annotatedImage)}`)
     if (!shapes.length && note) lines.push(`- [ ] **${screenName(a)}**: ${note}${fileLink(a.annotatedImage)}`)

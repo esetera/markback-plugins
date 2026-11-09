@@ -10,7 +10,7 @@ Plugins for [Markback](https://github.com/purescience-inc/markback), where you r
 review plugin add https://github.com/purescience-inc/markback-plugins
 ```
 
-It says what each plugin adds and asks before adding anything. Plugins run code on your computer, so add only ones you trust. `review plugin list` shows what you have; `review plugin remove <name>` takes one away.
+It says what each plugin adds and asks before adding anything (run any other way than in a terminal, it needs `--yes`). Plugins run code on your computer, so add only ones you trust. `review plugin list` shows what you have; `review plugin remove <name>` takes one away.
 
 ## marks-to-markdown
 
@@ -45,8 +45,8 @@ A plugin is a folder with a `plugin.json` and plain JavaScript modules (`.mjs`).
 ```
 
 - `name`: lowercase letters, numbers and dashes. It cannot be one of Markback's own commands.
-- `commands`: each becomes `review my-plugin hello`. The file's default export is a function that gets `{ args, flags, home, read, push }`: the words after the command, its `--flags`, where Markback keeps its files, and Markback's own functions to read answers and push screens.
-- `exports`: each becomes `review export --app MyApp --as csv`. The file's default export gets the app's latest answers (what `review read --app MyApp --latest --json` prints) and returns text.
+- `commands`: each becomes `review my-plugin hello`. The file's default export is a function that gets `{ args, flags, home, read, push }`: the words after the command, its `--flags` as an object, where Markback keeps its files, and Markback's own functions to read answers and push screens.
+- `exports`: each becomes `review export --app MyApp --as csv`. The file's default export gets the app's latest answers (what `review read --app MyApp --latest --json` prints) and `{ app, home }`, and returns text. Two plugins cannot add the same export name.
 - `network`: say `true` if the plugin uses the network. Markback shows it before anyone adds the plugin.
 
 ```js
