@@ -1,0 +1,7 @@
+{
+  "name": "marks-to-markdown",
+  "version": "1.0.0",
+  "description": "An app's marks as a Markdown checklist, for an issue or a pull request",
+  "exports": { "markdown": "markdown.mjs" },
+  "network": false
+}

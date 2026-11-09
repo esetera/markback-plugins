@@ -1,0 +1,9 @@
+{
+  "name": "markback-plugins",
+  "private": true,
+  "description": "Plugins for Markback, and how to write your own.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Pure Science Inc. <adam@pure.science>",
+  "scripts": { "test": "node --test test/*.test.mjs" }
+}
