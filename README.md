@@ -2,7 +2,7 @@
 
 # Markback plugins
 
-Plugins for [Markback](https://github.com/purescience-inc/markback), where you review an app's screens by drawing on them and your agent reads each mark as a request. A plugin adds a command to Markback, or a new way to export the marks, or both.
+Plugins for [Markback](https://github.com/esetera/markback), where you review an app's screens by drawing on them and your agent reads each mark as a request. A plugin adds a command to Markback, or a new way to export the marks, or both.
 
 ## Add them
 
