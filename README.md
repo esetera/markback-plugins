@@ -31,12 +31,13 @@ Looks good: Recipes.
 
 ## marks-to-github
 
-An app's marks as a GitHub issue, so a team can track them as work. Each screen with changes asked has its name, mode and round, your notes, and one checkbox per mark: the kind of mark, its words if it is text, and where it is in the picture's pixels. Screens that look good are one line at the end.
+An app's marks as a GitHub issue, so a team can track them as work, or as a comment on a pull request, so the marks are beside the change they are about. Each screen with changes asked has its name, mode and round, your notes, and one checkbox per mark: the kind of mark, its words if it is text, and where it is in the picture's pixels. Screens that look good are one line at the end.
 
 ```bash
 review export --app "Recipe box" --as github-issue                             # the issue text only
 review marks-to-github issue --app "Recipe box" --repo owner/name --dry-run    # the title and the body; makes nothing
 review marks-to-github issue --app "Recipe box" --repo owner/name              # makes the issue and prints its address
+review marks-to-github comment --app "Recipe box" --repo owner/name --pr 12    # the same marks as a comment on pull request 12
 ```
 
 ````markdown
@@ -72,7 +73,8 @@ Looks good: Recipes.
 - **Pictures.** Pictures stay on your computer unless you add `--pictures`. Without it, the issue says only that the marked picture is not attached. With `--pictures`, the marked pictures go to GitHub with the issue and show under each screen. For this you need GitHub CLI 2.99 or later, the first that can attach a picture (`gh issue create --attach`), write access to the repository, and a repository on github.com: GitHub Enterprise Server cannot take pictures this way. In a public repository, everyone can open the pictures. The GitHub CLI takes 50 pictures in one run; the issue says that the others are not attached. Pictures go to no other place.
 - **Files on your computer.** The issue names no file on your computer. Add `--paths` and it names each marked picture's file from Markback's folder down (`.review-wizard/inbox/recipe-box/home-light-….png`), never the folders above it.
 - **Not twice.** Answers that are already an issue are not made into one again: the command prints the earlier address and stops. Add `--again` to make one more. More marks sent later are new answers, and make a new issue. The list of issues made is in Markback's folder, in `plugin-data/marks-to-github/issues.json`.
-- **Long reviews.** GitHub takes 65,536 characters in one issue. A longer text is cut between marks, and its last line says how many marks are not there.
+- **On a pull request.** `comment --pr 12` puts the same text on pull request 12 as one comment. Its first line says what the issue's title says, with the app's name written as code when it could mean more to GitHub. `--dry-run`, `--paths` and `--again` work the same way, and the same answers are not put on the same pull request twice. Pictures cannot go with a comment: for pictures, make an issue. The list of comments made is in `plugin-data/marks-to-github/comments.json`.
+- **Long reviews.** GitHub takes 65,536 characters in one issue or one comment. A longer text is cut between marks, and its last line says how many marks are not there.
 - **Labels.** `--label review` adds a label that the repository has. For more than one, put a comma between them: `--label "review,design"`.
 
 ## Write your own

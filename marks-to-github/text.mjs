@@ -29,8 +29,10 @@ const codeBlock = text => {
   const fence = '`'.repeat(Math.max(3, longestRun(text) + 1))
   return `${fence}text\n${text}\n${fence}`
 }
+/** What GitHub makes a link or a picture of with common signs only: GH-3, a commit's number, an address, :+1:. */
+const LINKS = /\bGH-\d|\b[0-9a-f]{7,40}\b|:\/\/|www\.|:[\w+-]+:/i
 /** A name from the app: plain when it is only letters, numbers and common signs, as code when it could mean more to GitHub. */
-const name = text => (/^[\p{L}\p{N} (),.:'&/+-]*$/u.test(text) ? text : code(text))
+const name = text => (/^[\p{L}\p{N} (),.:'&/+-]*$/u.test(text) && !LINKS.test(text) ? text : code(text))
 const screenName = a => oneLine(`${a.screen}${a.mode ? ` (${a.mode})` : ''}`)
 
 const KINDS = { box: 'Box', arrow: 'Arrow', text: 'Text', freehand: 'Freehand line' }
@@ -59,9 +61,10 @@ const sentOf = changed => changed.flatMap(a => [...(a.earlier ?? []), a].map(sen
 /**
  * The parts of the issue. `picture(file, alt)` may give the Markdown that shows a marked picture. When it gives nothing, the
  * text says that the picture is not attached, and names its file only with `paths` (and `home`, Markback's folder). A body
- * too long for GitHub is cut between marks, and its last line says how many are left out.
+ * too long for GitHub is cut between marks, and its last line says how many are left out. `holder` is what the text goes
+ * in: an issue, or a comment.
  */
-export function issueText(answers, { app, home = '', paths = false, picture = () => null, limit = BODY_LIMIT } = {}) {
+export function issueText(answers, { app, home = '', paths = false, picture = () => null, limit = BODY_LIMIT, holder = 'issue' } = {}) {
   const sorted = [...answers].sort((a, b) => screenName(a).localeCompare(screenName(b)) || String(a.sentAt).localeCompare(String(b.sentAt)))
   const changed = sorted.filter(a => a.verdict !== 'approved')
   const good = sorted.filter(a => a.verdict === 'approved').map(a => name(screenName(a)))
@@ -101,9 +104,9 @@ export function issueText(answers, { app, home = '', paths = false, picture = ()
   let body = join(whole)
   if (body.length + room > limit) {
     // Cut at the first piece that does not fit, with room kept for the last line. Nothing after the cut is kept.
-    const last = left => ({ text: `This text is cut: one issue cannot hold more. ${left} to change ${left === 1 ? 'is' : 'are'} not here.` })
+    const last = left => ({ text: `This text is cut: one ${holder} cannot hold more. ${left} to change ${left === 1 ? 'is' : 'are'} not here.` })
     // The screens that look good can be too many to name: then their number is said.
-    const fewWords = { text: `Looks good: ${good.length} screen${good.length === 1 ? '' : 's'}. One issue cannot hold their names.` }
+    const fewWords = { text: `Looks good: ${good.length} screen${good.length === 1 ? '' : 's'}. One ${holder} cannot hold their names.` }
     const kept = [{ text: head }]
     let used = head.length + last(count).text.length + (good.length ? fewWords.text.length : 0) + 12
     let tasks = 0
@@ -127,5 +130,6 @@ export function issueText(answers, { app, home = '', paths = false, picture = ()
     if ([...cut].length + [...segment].length > 200) break
     cut += segment
   }
-  return { app: title, count, sent: sentOf(changed), title: `Review marks: ${cut}, ${count} to change`, body }
+  // `heading` is the title for a place where GitHub reads Markdown: there the app's name is as careful as the screens' names.
+  return { app: title, count, sent: sentOf(changed), title: `Review marks: ${cut}, ${count} to change`, heading: `Review marks: ${name(cut)}, ${count} to change`, body }
 }

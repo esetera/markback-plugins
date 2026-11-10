@@ -19,7 +19,7 @@ const MOST_PICTURES = 50
 const ATTACHES_FROM = [2, 99]
 
 /** The newest answer per screen, with the marks before it that still stand: the same rule as `review read --latest`. */
-const latestPerScreen = records => {
+export const latestPerScreen = records => {
   const byScreen = new Map()
   for (const r of records) byScreen.set(r.screenId, [...(byScreen.get(r.screenId) ?? []), r])
   return [...byScreen.values()].map(list => {
@@ -30,7 +30,7 @@ const latestPerScreen = records => {
 }
 
 /** Runs gh with arguments, never through a shell: no word of the marks is read as a command. `cwd` is the folder it runs in. */
-const gh = (args, cwd) => {
+export const gh = (args, cwd) => {
   try {
     return { ok: true, out: execFileSync(process.env.MARKBACK_GH || 'gh', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }) }
   } catch (error) {
@@ -48,18 +48,21 @@ const address = out => {
   return found ? { url: found[0], repo: found[1] } : null
 }
 
-/** The issues made so far, kept beside Markback's own files: the plugin's folder is replaced when the plugin is added again. */
-const madeFile = home => join(home, 'plugin-data', 'marks-to-github', 'issues.json')
-const readMade = home => {
+/**
+ * The issues made so far, kept beside Markback's own files: the plugin's folder is replaced when the plugin is added again.
+ * `list` names the file: the comments made on pull requests have their own.
+ */
+const madeFile = (home, list) => join(home, 'plugin-data', 'marks-to-github', `${list}.json`)
+export const readMade = (home, name = 'issues') => {
   try {
-    const list = JSON.parse(readFileSync(madeFile(home), 'utf8'))
+    const list = JSON.parse(readFileSync(madeFile(home, name), 'utf8'))
     return Array.isArray(list) ? list : []
   } catch {
     return []
   }
 }
-const writeMade = (home, list) => {
-  const file = madeFile(home)
+export const writeMade = (home, list, name = 'issues') => {
+  const file = madeFile(home, name)
   mkdirSync(dirname(file), { recursive: true })
   // Written whole, then put in place: a stop half way leaves the old list.
   writeFileSync(`${file}.part`, JSON.stringify(list, null, 2))

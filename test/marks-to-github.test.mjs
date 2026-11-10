@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { after, beforeEach, test } from 'node:test'
 import githubIssue from '../marks-to-github/github-issue.mjs'
+import comment from '../marks-to-github/comment.mjs'
 import issue from '../marks-to-github/issue.mjs'
 import { issueText } from '../marks-to-github/text.mjs'
 
@@ -318,4 +319,111 @@ test('--pictures with --dry-run names the pictures that would go, and sends noth
 test('nothing to change makes no issue', async () => {
   assert.equal(await run({}, [answers[2]]), 'Nothing to change in Recipe box. No issue was made.')
   assert.deepEqual(calls(), [])
+})
+
+// The comment on a pull request: the same text, with a first line in place of the title.
+const COMMENT = 'https://github.com/owner/name/pull/12#issuecomment-99'
+const commentFile = () => join(home, 'plugin-data', 'marks-to-github', 'comments.json')
+const runComment = async (flags, records = answers) => {
+  const printed = { out: [], problems: [] }
+  const { log, error } = console
+  console.log = (...words) => printed.out.push(words.join(' '))
+  console.error = (...words) => printed.problems.push(words.join(' '))
+  try {
+    await comment({ args: [], flags: { app: 'Recipe box', repo: 'owner/name', pr: '12', ...flags }, home, read: () => records })
+  } finally {
+    Object.assign(console, { log, error })
+    warned = printed.problems.join('\n')
+  }
+  return printed.out.join('\n')
+}
+
+test('comment --dry-run prints the comment, with a first line in place of the title, and makes nothing', async () => {
+  const out = await runComment({ 'dry-run': true })
+  assert.equal(out, `**Review marks: Recipe box, 4 to change**\n\n${body}\nDry run. No comment was made.`)
+  assert.deepEqual(calls(), [], 'gh was not run')
+  assert.equal(existsSync(commentFile()), false)
+})
+
+test('comment gives gh the pull request, the repository and the body in a file, and prints the address gh prints', async () => {
+  process.env.STAND_IN_SAYS = COMMENT
+  assert.equal(await runComment({}), COMMENT)
+  const [call, ...more] = calls()
+  assert.deepEqual(more, [], 'one comment')
+  const bodyFile = call.args[call.args.indexOf('--body-file') + 1]
+  assert.deepEqual(call.args, ['pr', 'comment', '12', '--repo', 'owner/name', '--body-file', bodyFile])
+  assert.equal(call.body, `**Review marks: Recipe box, 4 to change**\n\n${body}`)
+  assert.ok(!call.body.includes(work), 'no place on this computer is in the text')
+  assert.equal(existsSync(bodyFile), false, 'the file with the body is taken away after')
+  assert.deepEqual(JSON.parse(readFileSync(commentFile(), 'utf8')).map(r => [r.app, r.repo, r.pr, r.url]), [['Recipe box', 'owner/name', '12', COMMENT]])
+  assert.equal(existsSync(madeFile()), false, 'the list of issues is not touched')
+})
+
+test('an app name that could mean more to GitHub is written as code in the first line of the comment', async () => {
+  const out = await runComment({ 'dry-run': true }, answers.map(a => ({ ...a, app: 'Tell @someone #3' })))
+  assert.match(out, /^\*\*Review marks: `Tell @someone #3`, 4 to change\*\*\n\n/)
+})
+
+test('the same answers are not put on the same pull request twice; another pull request gets its own comment', async () => {
+  process.env.STAND_IN_SAYS = COMMENT
+  await runComment({})
+  const second = await runComment({})
+  assert.match(second, /^These marks of Recipe box are already a comment on pull request 12: https:\/\/github\.com\/owner\/name\/pull\/12#issuecomment-99\n/)
+  assert.match(second, /--again/)
+  assert.equal(calls().length, 1)
+  await runComment({ again: true })
+  assert.equal(calls().length, 2)
+  process.env.STAND_IN_SAYS = 'https://github.com/owner/name/pull/13#issuecomment-100'
+  assert.equal(await runComment({ pr: '13' }), 'https://github.com/owner/name/pull/13#issuecomment-100')
+  assert.equal(calls().length, 3)
+})
+
+test('a name that GitHub would make a link or a picture of is written as code: GH-3, a commit, an address, :+1:', async () => {
+  for (const app of ['GH-3', 'a5c3785ed8d6a35868bc169f07e40e889087fd2e', 'https://example.com/x', 'www.example.com', ':+1:']) {
+    const out = await runComment({ 'dry-run': true }, answers.map(a => ({ ...a, app })))
+    assert.ok(out.startsWith(`**Review marks: \`${app}\`, 4 to change**\n\n`), app)
+  }
+  assert.match(await runComment({ 'dry-run': true }, answers.map(a => ({ ...a, app: "Tom's shop: one & two" }))), /^\*\*Review marks: Tom's shop: one & two, /)
+})
+
+test('an address on another pull request than the one asked: the address is printed, and one line says to look', async () => {
+  process.env.STAND_IN_SAYS = COMMENT
+  assert.equal(await runComment({ pr: '1000' }), COMMENT)
+  assert.equal(warned, 'The comment was asked for pull request 1000, but its address is on pull request 12. Look at it.')
+})
+
+test('--pr is a number and nothing more; a number given as a number is taken', async () => {
+  for (const pr of [undefined, true, '', '0', '-1', '12abc', 'https://github.com/owner/name/pull/12', '--web']) {
+    await assert.rejects(runComment({ pr }), { message: 'Say which pull request, by its number: --pr 12' })
+  }
+  assert.deepEqual(calls(), [])
+  process.env.STAND_IN_SAYS = COMMENT
+  assert.equal(await runComment({ pr: 12 }), COMMENT)
+})
+
+test('comment takes no pictures, and says where pictures can go', async () => {
+  await assert.rejects(runComment({ pictures: true }), /Pictures cannot go with a comment on a pull request/)
+  assert.deepEqual(calls(), [])
+})
+
+test('only the address of a comment on a pull request on github.com counts; the address of an issue does not', async () => {
+  await assert.rejects(runComment({}), /did not give the address of a comment on a pull request on github\.com\. It said:\nhttps:\/\/github\.com\/owner\/name\/issues\/7\nLook at pull request 12 of owner\/name/)
+  assert.equal(existsSync(commentFile()), false)
+})
+
+test('gh that fails on the comment: its own words are passed on, and the answers can be tried again', async () => {
+  process.env.STAND_IN_FAILS = '1'
+  await assert.rejects(runComment({}), /The GitHub CLI did not make the comment:\ngh: not signed in\n/)
+  assert.equal(existsSync(commentFile()), false)
+})
+
+test('nothing to change makes no comment, and a long comment is cut with room for its first line', async () => {
+  assert.equal(await runComment({}, [answers[2]]), 'Nothing to change in Recipe box. No comment was made.')
+  assert.deepEqual(calls(), [])
+  const many = Array.from({ length: 3000 }, (_, i) => ({ app: 'A', screen: `Screen ${i}`, screenId: `s${i}`, round: 1, verdict: 'changes', notes: 'Move this', sentAt: '1', shapes: [{ type: 'box', box: { x: 1, y: 2, w: 3, h: 4 } }] }))
+  process.env.STAND_IN_SAYS = COMMENT
+  await runComment({}, many)
+  const [call] = calls()
+  assert.ok(call.body.length <= 65536)
+  assert.match(call.body, /\n\nThis text is cut: one comment cannot hold more\. \d+ to change are not here\.\n$/)
 })
