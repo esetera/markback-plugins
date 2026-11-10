@@ -102,8 +102,10 @@ export function issueText(answers, { app, home = '', paths = false, picture = ()
   if (body.length + room > limit) {
     // Cut at the first piece that does not fit, with room kept for the last line. Nothing after the cut is kept.
     const last = left => ({ text: `This text is cut: one issue cannot hold more. ${left} to change ${left === 1 ? 'is' : 'are'} not here.` })
+    // The screens that look good can be too many to name: then their number is said.
+    const fewWords = { text: `Looks good: ${good.length} screen${good.length === 1 ? '' : 's'}. One issue cannot hold their names.` }
     const kept = [{ text: head }]
-    let used = head.length + last(count).text.length + 8
+    let used = head.length + last(count).text.length + (good.length ? fewWords.text.length : 0) + 12
     let tasks = 0
     for (const p of pieces) {
       if (used + p.text.length + 2 + p.room > limit) break
@@ -112,10 +114,18 @@ export function issueText(answers, { app, home = '', paths = false, picture = ()
       tasks += p.tasks
     }
     while (kept.at(-1).lead) kept.pop()
-    const fits = looksGood.filter(p => used + p.text.length + 2 <= limit)
-    body = join([...kept, last(count - tasks), ...fits])
+    // Nothing is said about marks left out when none were: then only the names of the screens that look good did not fit.
+    const left = count - tasks
+    const goodLine = looksGood.map(p => (used - fewWords.text.length + p.text.length <= limit ? p : fewWords))
+    body = join([...kept, ...(left ? [last(left)] : []), ...goodLine])
   }
   const title = oneLine(app || sorted[0]?.app) || 'an app'
-  // GitHub takes 256 characters in a title.
-  return { app: title, count, sent: sentOf(changed), title: `Review marks: ${title.slice(0, 200)}, ${count} to change`, body }
+  // GitHub takes 256 characters in a title. The name is cut between whole characters, never inside one: an emoji can be
+  // many code points, so the code points are counted and the cut is made before the character that would pass 200.
+  let cut = ''
+  for (const { segment } of new Intl.Segmenter().segment(title)) {
+    if ([...cut].length + [...segment].length > 200) break
+    cut += segment
+  }
+  return { app: title, count, sent: sentOf(changed), title: `Review marks: ${cut}, ${count} to change`, body }
 }

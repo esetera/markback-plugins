@@ -144,6 +144,23 @@ test('an app name of two lines is one line in the title', () => {
   assert.match(githubIssue(answers, { app: 'Recipe\nbox' }), /^Review marks: Recipe box, 4 to change\n\n/)
 })
 
+test('a long app name is cut between whole characters in the title, never inside an emoji', () => {
+  const thumb = '\u{1F44D}\u{1F3FD}'
+  const { title } = issueText(answers, { app: `a${thumb.repeat(250)}` })
+  // Each thumb is two code points: 99 of them and the letter are 199, and one more would pass 200.
+  assert.equal(title, `Review marks: a${thumb.repeat(99)}, 4 to change`)
+  assert.doesNotMatch(title, /\p{Surrogate}/u, 'no half of a character')
+})
+
+test('when only the names of the screens that look good are too many, their number is said, and nothing about marks left out', () => {
+  const good = Array.from({ length: 100 }, (_, i) => ({ app: 'A', screen: `Screen ${String(i).padStart(3, '0')}`, verdict: 'approved', notes: '', shapes: [], sentAt: '1' }))
+  const { body } = issueText([{ app: 'A', screen: 'Home', round: 1, verdict: 'changes', notes: 'Move this', sentAt: '1', shapes: [{ type: 'box', box: { x: 1, y: 2, w: 3, h: 4 } }] }, ...good], { limit: 600 })
+  assert.ok(body.length <= 600)
+  assert.ok(body.includes('- [ ] Box at x 1, y 2, 3 x 4 pixels'))
+  assert.doesNotMatch(body, /not here|This text is cut/)
+  assert.ok(body.endsWith('\n\nLooks good: 100 screens. One issue cannot hold their names.\n'))
+})
+
 test('a body too long for one issue is cut between marks, and its last line says how many are not there', () => {
   const many = Array.from({ length: 40 }, (_, i) => ({ app: 'A', screen: `Screen ${String(i).padStart(2, '0')}`, round: 1, verdict: 'changes', notes: 'Move this', sentAt: '1',
     shapes: [{ type: 'box', box: { x: 1, y: 2, w: 3, h: 4 } }, { type: 'box', box: { x: 5, y: 6, w: 7, h: 8 } }] }))
@@ -218,15 +235,33 @@ test('the address is printed even when the list of issues made cannot be kept, a
   assert.match(warned, /The issue was made, but the list of issues made could not be kept/)
 })
 
-test('only an issue of that repository counts as the address', async () => {
-  process.env.STAND_IN_SAYS = 'https://github.com/other/place/issues/7'
-  await assert.rejects(run({}), /The GitHub CLI did not give the address of an issue in owner\/name\. It said:\nhttps:\/\/github\.com\/other\/place\/issues\/7\n/)
+test('only the address of an issue on github.com counts as the address', async () => {
+  process.env.STAND_IN_SAYS = 'https://example.com/owner/name/issues/7'
+  await assert.rejects(run({}), /The GitHub CLI did not give the address of an issue on github\.com\. It said:\nhttps:\/\/example\.com\/owner\/name\/issues\/7\nLook at owner\/name/)
   assert.equal(existsSync(madeFile()), false)
 })
 
-test('--repo is owner/name and nothing more', async () => {
-  for (const repo of ['name', 'github.com/owner/name', 'owner/name/issues', '-R/x', 'owner/na me']) {
+test('a repository that has moved: the address under its new name is taken and kept, one line says it moved, and no second issue is made', async () => {
+  process.env.STAND_IN_SAYS = 'https://github.com/new-owner/new.name/issues/12'
+  assert.equal(await run({}), 'https://github.com/new-owner/new.name/issues/12')
+  assert.equal(warned, 'The repository owner/name has moved. It is now new-owner/new.name, and the issue is there.')
+  assert.deepEqual(JSON.parse(readFileSync(madeFile(), 'utf8')).map(r => [r.repo, r.now, r.url]), [['owner/name', 'new-owner/new.name', 'https://github.com/new-owner/new.name/issues/12']])
+  // Asked again under the old name or the new one, it stops.
+  assert.match(await run({}), /already an issue: https:\/\/github\.com\/new-owner\/new\.name\/issues\/12\n/)
+  assert.match(await run({ repo: 'New-Owner/new.name' }), /already an issue/)
+  assert.equal(calls().length, 1)
+  // A repository that has not moved gets no such line.
+  delete process.env.STAND_IN_SAYS
+  await run({ again: true })
+  assert.equal(warned, '')
+})
+
+test('--repo is owner/name and nothing more; a host before it gets its own plain line', async () => {
+  for (const repo of ['name', 'https://github.com/owner/name', '-R/x', 'owner/na me']) {
     await assert.rejects(run({ repo }), { message: 'Say which repository: --repo owner/name' })
+  }
+  for (const repo of ['github.com/owner/name', 'git.example.com/owner/name']) {
+    await assert.rejects(run({ repo }), { message: 'Only repositories on github.com are taken. Say it without the host: --repo owner/name' })
   }
   assert.deepEqual(calls(), [])
 })

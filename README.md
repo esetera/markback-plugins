@@ -66,7 +66,7 @@ Save on the right
 Looks good: Recipes.
 ````
 
-- **What it needs.** The [GitHub CLI](https://cli.github.com) (`gh`), signed in (`gh auth login`), and the right to open issues in the repository. `--repo` is `owner/name`.
+- **What it needs.** The [GitHub CLI](https://cli.github.com) (`gh`), signed in (`gh auth login`), and the right to open issues in the repository. `--repo` is `owner/name`, a repository on github.com. When the repository has moved, the command says its new name.
 - **What it sends, and where.** Markback sends nothing. The `issue` command sends the issue text to GitHub: the app's name, the screens' names, your notes, the words of your text marks and the place of each mark. Everyone who can see the repository can read it. The export and `--dry-run` send nothing, so you can read the text first.
 - **Your words stay your words.** Notes and the words of text marks are written as code. GitHub shows them letter for letter: an `@name` tells nobody, a `#3` links nothing, and a `- [ ]` in a note adds no checkbox.
 - **Pictures.** Pictures stay on your computer unless you add `--pictures`. Without it, the issue says only that the marked picture is not attached. With `--pictures`, the marked pictures go to GitHub with the issue and show under each screen. For this you need GitHub CLI 2.99 or later, the first that can attach a picture (`gh issue create --attach`), write access to the repository, and a repository on github.com: GitHub Enterprise Server cannot take pictures this way. In a public repository, everyone can open the pictures. The GitHub CLI takes 50 pictures in one run; the issue says that the others are not attached. Pictures go to no other place.

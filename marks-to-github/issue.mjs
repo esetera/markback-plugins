@@ -39,10 +39,13 @@ const gh = (args, cwd) => {
   }
 }
 
-/** The address of the new issue: only a line that is an issue of this repository counts, whatever else gh prints. */
-const address = (out, repo) => {
-  const issue = new RegExp(`^https://[^/\\s]+/${repo.replace(/[.-]/g, '\\$&')}/issues/\\d+$`, 'i')
-  return out.split('\n').map(line => line.trim()).filter(line => issue.test(line)).at(-1)
+/**
+ * The address of the new issue, and the repository it is in: only a line that is an issue on github.com counts, whatever
+ * else gh prints. A repository that has moved gives its new name here.
+ */
+const address = out => {
+  const found = out.split('\n').map(line => /^https:\/\/github\.com\/([\w.-]+\/[\w.-]+)\/issues\/\d+$/.exec(line.trim())).filter(Boolean).at(-1)
+  return found ? { url: found[0], repo: found[1] } : null
 }
 
 /** The issues made so far, kept beside Markback's own files: the plugin's folder is replaced when the plugin is added again. */
@@ -89,9 +92,11 @@ export default async function issue({ flags = {}, home, read }) {
   }
   if (!text.count) return console.log(`Nothing to change in ${text.app}. No issue was made.`)
   const repo = said('repo')
+  if (/^[^/\s]+\/[^/\s]+\/[^/\s]+$/.test(repo)) throw new Error('Only repositories on github.com are taken. Say it without the host: --repo owner/name')
   if (!/^[A-Za-z0-9][\w.-]*\/[\w.-]+$/.test(repo)) throw new Error('Say which repository: --repo owner/name')
 
-  const same = r => r.app === text.app && String(r.repo).toLowerCase() === repo.toLowerCase() && r.sent === text.sent
+  // A repository that moved is known by the name it was asked for and by the name it has now.
+  const same = r => r.app === text.app && r.sent === text.sent && [r.repo, r.now].some(known => String(known ?? '').toLowerCase() === repo.toLowerCase())
   const before = readMade(home).filter(same).at(-1)
   if (before && !flags.again) {
     console.log(`These marks of ${text.app} are already an issue: ${before.url}\nTo make one more, add --again.`)
@@ -119,15 +124,18 @@ export default async function issue({ flags = {}, home, read }) {
       ...(said('label') ? ['--label', said('label')] : []),
       ...pictures.flatMap(p => ['--attach', join(dir, p.name)]),
     ], dir)
-    const url = address(made.out, repo)
-    if (!url && !made.ok) throw new Error(`The GitHub CLI did not make the issue:\n${made.problem}\nIf you are not signed in, run: gh auth login`)
-    if (!url) throw new Error(`The GitHub CLI did not give the address of an issue in ${repo}. It said:\n${made.out.trim() || 'nothing'}\nLook at the repository before you run this again.`)
+    const found = address(made.out)
+    if (!found && !made.ok) throw new Error(`The GitHub CLI did not make the issue:\n${made.problem}\nIf you are not signed in, run: gh auth login`)
+    if (!found) throw new Error(`The GitHub CLI did not give the address of an issue on github.com. It said:\n${made.out.trim() || 'nothing'}\nLook at ${repo} before you run this again.`)
+    const { url } = found
+    const moved = found.repo.toLowerCase() !== repo.toLowerCase()
     // The address first: whatever happens after, the person has it.
     console.log(url)
+    if (moved) console.error(`The repository ${repo} has moved. It is now ${found.repo}, and the issue is there.`)
     // gh makes the issue with the pictures that went up, and says which did not.
     if (!made.ok) console.error(`The issue was made, but gh said:\n${made.problem}`)
     try {
-      writeMade(home, [...readMade(home), { app: text.app, repo, sent: text.sent, url, at: new Date().toISOString() }])
+      writeMade(home, [...readMade(home), { app: text.app, repo, ...(moved ? { now: found.repo } : {}), sent: text.sent, url, at: new Date().toISOString() }])
     } catch (error) {
       console.error(`The issue was made, but the list of issues made could not be kept (${error.code || error.message}). If you run this again, it makes the issue again.`)
     }
