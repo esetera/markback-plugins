@@ -1,0 +1,8 @@
+{
+  "name": "marks-to-github",
+  "version": "1.0.0",
+  "description": "An app's marks as a GitHub issue, made with the GitHub CLI",
+  "commands": { "issue": "issue.mjs" },
+  "exports": { "github-issue": "github-issue.mjs" },
+  "network": true
+}

@@ -29,6 +29,45 @@ review export --app "Recipe box" --as markdown --out marks.md
 Looks good: Recipes.
 ```
 
+## marks-to-github
+
+An app's marks as a GitHub issue, so a team can track them as work. Each screen with changes asked has its name, mode and round, your notes, and one checkbox per mark: the kind of mark, its words if it is text, and where it is in the picture's pixels. Screens that look good are one line at the end.
+
+```bash
+review export --app "Recipe box" --as github-issue                             # the issue text only
+review marks-to-github issue --app "Recipe box" --repo owner/name --dry-run    # the title and the body; makes nothing
+review marks-to-github issue --app "Recipe box" --repo owner/name              # makes the issue and prints its address
+```
+
+```markdown
+Review marks: Recipe box, 3 to change
+
+3 to change, from a review with [Markback](https://github.com/esetera/markback). Each place is in the pixels of its picture.
+
+### Home (light), round 1
+
+> Bigger title
+
+- [ ] Box at x 120, y 40, 300 x 60 pixels
+- [ ] Text "Not yellow" at x 400, y 600, 90 x 20 pixels
+
+Picture: 1290 x 835 pixels. Marked picture, on the reviewer's computer: `~/.review-wizard/inbox/recipe-box/home-light-….png`
+
+### New recipe, round 1
+
+> Save on the right
+
+- [ ] Do what the note says (no marks)
+
+Looks good: Recipes.
+```
+
+- **What it needs.** The [GitHub CLI](https://cli.github.com) (`gh`), signed in (`gh auth login`), and the right to open issues in the repository.
+- **What it sends, and where.** Markback sends nothing. The `issue` command sends the issue text to GitHub: the app's name, the screens' names, your notes, the words of your text marks and the place of each mark. Everyone who can see the repository can read it. The export and `--dry-run` send nothing, so you can read the text first.
+- **Pictures.** Pictures stay on your computer unless you add `--pictures`. Without it, the issue names the file of each marked picture on your computer, and only you can open it. With `--pictures`, the marked pictures go to GitHub with the issue and show under each screen. This needs GitHub CLI 2.99 or later, the first that can attach a picture (`gh issue create --attach`). In a public repository, everyone can open the pictures. The GitHub CLI takes 50 pictures in one run; the issue names the files of the others. Pictures go to no other place.
+- **Not twice.** A round that is already an issue is not made again: the command prints the earlier address and stops. Add `--again` to make one more. The list of issues made is in Markback's folder, in `plugin-data/marks-to-github/issues.json`.
+- **Labels.** `--label review` adds a label that the repository has. For more than one, put a comma between them: `--label "review,design"`.
+
 ## Write your own
 
 A plugin is a folder with a `plugin.json` and plain JavaScript modules (`.mjs`). Nothing to install, and no build.
