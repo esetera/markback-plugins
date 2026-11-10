@@ -39,33 +39,40 @@ review marks-to-github issue --app "Recipe box" --repo owner/name --dry-run    #
 review marks-to-github issue --app "Recipe box" --repo owner/name              # makes the issue and prints its address
 ```
 
-```markdown
+````markdown
 Review marks: Recipe box, 3 to change
 
 3 to change, from a review with [Markback](https://github.com/esetera/markback). Each place is in the pixels of its picture.
 
 ### Home (light), round 1
 
-> Bigger title
+```text
+Bigger title
+```
 
 - [ ] Box at x 120, y 40, 300 x 60 pixels
-- [ ] Text "Not yellow" at x 400, y 600, 90 x 20 pixels
+- [ ] Text `Not yellow` at x 400, y 600, 90 x 20 pixels
 
-Picture: 1290 x 835 pixels. Marked picture, on the reviewer's computer: `~/.review-wizard/inbox/recipe-box/home-light-….png`
+Picture: 1290 x 835 pixels. The marked picture is not attached. It is on the reviewer's computer.
 
 ### New recipe, round 1
 
-> Save on the right
+```text
+Save on the right
+```
 
 - [ ] Do what the note says (no marks)
 
 Looks good: Recipes.
-```
+````
 
-- **What it needs.** The [GitHub CLI](https://cli.github.com) (`gh`), signed in (`gh auth login`), and the right to open issues in the repository.
+- **What it needs.** The [GitHub CLI](https://cli.github.com) (`gh`), signed in (`gh auth login`), and the right to open issues in the repository. `--repo` is `owner/name`.
 - **What it sends, and where.** Markback sends nothing. The `issue` command sends the issue text to GitHub: the app's name, the screens' names, your notes, the words of your text marks and the place of each mark. Everyone who can see the repository can read it. The export and `--dry-run` send nothing, so you can read the text first.
-- **Pictures.** Pictures stay on your computer unless you add `--pictures`. Without it, the issue names the file of each marked picture on your computer, and only you can open it. With `--pictures`, the marked pictures go to GitHub with the issue and show under each screen. This needs GitHub CLI 2.99 or later, the first that can attach a picture (`gh issue create --attach`). In a public repository, everyone can open the pictures. The GitHub CLI takes 50 pictures in one run; the issue names the files of the others. Pictures go to no other place.
-- **Not twice.** A round that is already an issue is not made again: the command prints the earlier address and stops. Add `--again` to make one more. The list of issues made is in Markback's folder, in `plugin-data/marks-to-github/issues.json`.
+- **Your words stay your words.** Notes and the words of text marks are written as code. GitHub shows them letter for letter: an `@name` tells nobody, a `#3` links nothing, and a `- [ ]` in a note adds no checkbox.
+- **Pictures.** Pictures stay on your computer unless you add `--pictures`. Without it, the issue says only that the marked picture is not attached. With `--pictures`, the marked pictures go to GitHub with the issue and show under each screen. For this you need GitHub CLI 2.99 or later, the first that can attach a picture (`gh issue create --attach`), write access to the repository, and a repository on github.com: GitHub Enterprise Server cannot take pictures this way. In a public repository, everyone can open the pictures. The GitHub CLI takes 50 pictures in one run; the issue says that the others are not attached. Pictures go to no other place.
+- **Files on your computer.** The issue names no file on your computer. Add `--paths` and it names each marked picture's file from Markback's folder down (`.review-wizard/inbox/recipe-box/home-light-….png`), never the folders above it.
+- **Not twice.** Answers that are already an issue are not made into one again: the command prints the earlier address and stops. Add `--again` to make one more. More marks sent later are new answers, and make a new issue. The list of issues made is in Markback's folder, in `plugin-data/marks-to-github/issues.json`.
+- **Long reviews.** GitHub takes 65,536 characters in one issue. A longer text is cut between marks, and its last line says how many marks are not there.
 - **Labels.** `--label review` adds a label that the repository has. For more than one, put a comma between them: `--label "review,design"`.
 
 ## Write your own
